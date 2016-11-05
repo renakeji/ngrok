@@ -6,7 +6,6 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"math"
-	"net"
 	"ngrok/client/mvc"
 	"ngrok/conn"
 	"ngrok/log"
@@ -22,7 +21,6 @@ import (
 
 const (
 	defaultServerAddr   = "ngrokd.ngrok.com:443"
-	defaultInspectAddr  = "127.0.0.1:4040"
 	pingInterval        = 20 * time.Second
 	maxPongLatency      = 15 * time.Second
 	updateCheckInterval = 6 * time.Hour
@@ -115,21 +113,8 @@ func newClientModel(config *Configuration, ctl mvc.Controller) *ClientModel {
 
 	// configure TLS SNI
 	m.tlsConfig.ServerName = serverName(m.serverAddr)
-	m.tlsConfig.InsecureSkipVerify = useInsecureSkipVerify()
 
 	return m
-}
-
-// server name in release builds is the host part of the server address
-func serverName(addr string) string {
-	host, _, err := net.SplitHostPort(addr)
-
-	// should never panic because the config parser calls SplitHostPort first
-	if err != nil {
-		panic(err)
-	}
-
-	return host
 }
 
 // mvc.State interface
@@ -221,12 +206,13 @@ func (c *ClientModel) control() {
 		ctlConn conn.Conn
 		err     error
 	)
-	if c.proxyUrl == "" {
-		// simple non-proxied case, just connect to the server
+	//todo 这里的判断要去掉
+	//if c.proxyUrl == "" {
+	//	// simple non-proxied case, just connect to the server
 		ctlConn, err = conn.Dial(c.serverAddr, "ctl", c.tlsConfig)
-	} else {
-		ctlConn, err = conn.DialHttpProxy(c.proxyUrl, c.serverAddr, "ctl", c.tlsConfig)
-	}
+	//} else {
+	//	ctlConn, err = conn.DialHttpProxy(c.proxyUrl, c.serverAddr, "ctl", c.tlsConfig)
+	//}
 	if err != nil {
 		panic(err)
 	}
@@ -344,11 +330,11 @@ func (c *ClientModel) proxy() {
 		err        error
 	)
 
-	if c.proxyUrl == "" {
+	//if c.proxyUrl == "" {
 		remoteConn, err = conn.Dial(c.serverAddr, "pxy", c.tlsConfig)
-	} else {
-		remoteConn, err = conn.DialHttpProxy(c.proxyUrl, c.serverAddr, "pxy", c.tlsConfig)
-	}
+	//} else {
+	//	remoteConn, err = conn.DialHttpProxy(c.proxyUrl, c.serverAddr, "pxy", c.tlsConfig)
+	//}
 
 	if err != nil {
 		log.Error("Failed to establish proxy connection: %v", err)
